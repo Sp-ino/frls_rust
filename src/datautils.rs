@@ -1,6 +1,36 @@
 use core::panic;
 use matfile::MatFile;
 use plotters::prelude::*;
+use std::collections::HashMap;
+
+
+
+pub fn get_matfile_data<'a>(matfile: &'a MatFile) -> HashMap<&'a str, Vec<f64>> {
+    // Gets data from matfile
+
+    let mut map = HashMap::new();
+
+    for (idx, arr) in matfile.arrays().iter().enumerate() {
+        let arr_name = arr.name();
+
+        
+        let numdata = matfile
+        .find_by_name(arr_name)
+        .unwrap_or_else(|| panic!("{} field is None!", arr_name))
+        .data();
+        
+        if let matfile::NumericData::Double { real, imag: _ } = numdata {
+            let vec = real.clone();
+            print!("Array at index {} is named {} and has length {}\n", idx, arr_name, vec.len());
+            map.insert(arr_name, vec);
+        } else {
+            panic!("Could not convert vector {} to Vec", arr_name);
+        }
+    }
+
+    map
+}
+
 
 
 pub fn plot_curve_2d(curve: Vec<(f64, f64)>, path: &str) -> Result<(), Box<dyn std::error::Error>> {
@@ -32,49 +62,6 @@ pub fn plot_curve_2d(curve: Vec<(f64, f64)>, path: &str) -> Result<(), Box<dyn s
     root.present()?;
 
     Ok(())
-}
-
-
-
-pub fn get_matfile_data(filename: &str) -> (Vec<f64>, Vec<f64>, Vec<f64>) {
-    // Gets data from matfile
-
-    let file = std::fs::File::open(filename)
-            .expect("Could not open file!");
-
-    let file = MatFile::parse(file)
-            .expect("Could not parse .mat file");
-
-    for arr in file.arrays() {
-        print!("Found array named {:?}\n", arr.name());
-    }
-    let t = file.find_by_name("t").unwrap().data();
-    let idata = file.find_by_name("idata").unwrap_or_else(|| panic!("idata field is None!")).data();
-    let odata = file.find_by_name("odata2").unwrap_or_else(|| panic!("odata2 field is None!")).data();
-
-    let time;
-    let input;
-    let target;
-
-    if let matfile::NumericData::Double { real, imag: _ } = t {
-        time = real.clone();
-    } else {
-        panic!("Could not convert");
-    }
-
-    if let matfile::NumericData::Double { real, imag: _ } = odata {
-        input = real.clone();
-    } else {
-        panic!("Could not convert");
-    }
-
-    if let matfile::NumericData::Double { real, imag: _ } = idata {
-        target = real.clone();
-    } else {
-        panic!("Could not convert");
-    }
-
-    (time, input, target)
 }
 
 
